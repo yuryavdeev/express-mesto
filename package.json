@@ -1,0 +1,31 @@
+{
+  "name": "express-mesto",
+  "version": "1.0.0",
+  "description": "server by express",
+  "main": "app.js",
+  "scripts": {
+    "start": "app.js",
+    "dev": "nodemon",
+    "lint": "npx eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuryavdeev/express-mesto.git"
+  },
+  "keywords": [],
+  "author": "yury avdeev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yuryavdeev/express-mesto/issues"
+  },
+  "homepage": "https://github.com/yuryavdeev/express-mesto#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.31.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.23.4",
+    "nodemon": "^2.0.12"
+  }
+}
