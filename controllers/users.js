@@ -1,14 +1,6 @@
 const User = require('../models/user');
 
-const badRequestCode = 400;
-const badRequestMessageCreateUser = 'Переданы некорректные данные при создании пользователя.';
-const badRequestMessageGetUsers = 'Переданы некорректные данные.';
-const badRequestMessageUpdateUser = 'Переданы некорректные данные при обновлении профиля.';
-const badRequestMessageUpdateAvatar = 'Переданы некорректные данные при обновлении аватара.';
-const notFoundCode = 404;
-const notFoundMessageGetUser = 'Пользователь по указанному _id не найден.';
-const notFoundMessageUpdateUser = 'Пользователь с указанным _id не найден.';
-const internalServerErrorCode = 500;
+const { codeList, messageList } = require('../utils/utils');
 
 module.exports.createUser = (req, res) => {
   const { name, about, avatar } = req.body;
@@ -16,37 +8,31 @@ module.exports.createUser = (req, res) => {
     .then((user) => res.send({ user }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageCreateUser });
+        res.status(codeList.badRequest).send({ message: messageList.badRequestCreateUser });
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
 module.exports.getAllUsers = (req, res) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch((err) => {
-      if (err.message === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageGetUsers });
-      }
-      res.status(internalServerErrorCode).send({ message: err.message });
-    });
+    .catch((err) => res.status(codeList.internalServerError).send({ message: err.message }));
 };
 
 module.exports.getUser = (req, res) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (!user) {
-        res.status(notFoundCode).send({ message: notFoundMessageGetUser });
-      } else {
-        res.send({ user });
+        return res.status(codeList.notFound).send({ message: messageList.notFoundGetUser });
       }
+      return res.send({ user });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(notFoundCode).send({ message: notFoundMessageGetUser });
+        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });//
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
@@ -62,15 +48,17 @@ module.exports.updateUser = (req, res) => {
       runValidators: true,
     },
   )
-    .then((user) => res.send({ user }))
+    .then((user) => {
+      if (!user) {
+        return res.status(codeList.notFound).send({ message: messageList.notFoundGetUser });
+      }
+      return res.send({ user });
+    })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageUpdateUser });
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        res.status(codeList.badRequest).send({ message: messageList.badRequestUpdateUser });
       }
-      if (err.name === 'CastError') {
-        res.status(notFoundCode).send({ message: notFoundMessageUpdateUser });
-      }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
@@ -83,14 +71,20 @@ module.exports.updateAvatar = (req, res) => {
       runValidators: true,
     },
   )
+    .orFail(() => {
+      const error = new ReferenceError();
+      error.statusCode = codeList.notFound;
+      // throw генерир. искл-я, текущ ф-я будет ост-на и упр-е будет передано в первый блок catch
+      throw error;
+    })
     .then((user) => res.send({ user }))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageUpdateAvatar });
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        res.status(codeList.badRequest).send({ message: messageList.badRequestUpdateAvatar });
       }
-      if (err.name === 'CastError') {
-        res.status(notFoundCode).send({ message: notFoundMessageUpdateUser });
+      if (err.statusCode === codeList.notFound) {
+        res.status(codeList.notFound).send({ message: messageList.notFoundUpdateUser });
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ err });
     });
 };

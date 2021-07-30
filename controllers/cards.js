@@ -1,23 +1,11 @@
 const Card = require('../models/card');
 
-const badRequestCode = 400;
-const badRequestMessageCreateCard = 'Переданы некорректные данные при создании карточки.';
-const badRequestMessageGetCards = 'Переданы некорректные данные.';
-const badRequestMessageSetLike = 'Переданы некорректные данные для постановки лайка';
-const badRequestMessageDeleteLike = 'Переданы некорректные данные для снятия лайка';
-const notFoundCode = 404;
-const notFoundMessageCard = 'Карточка с указанным _id не найдена.';
-const internalServerErrorCode = 500;
+const { codeList, messageList } = require('../utils/utils');
 
 module.exports.getAllCards = (req, res) => {
   Card.find({})
     .then((cards) => res.send({ data: cards }))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageGetCards });
-      }
-      res.status(internalServerErrorCode).send({ message: err.message });
-    });
+    .catch((err) => res.status(codeList.internalServerError).send({ message: err.message }));
 };
 
 module.exports.createCard = (req, res) => {
@@ -27,9 +15,9 @@ module.exports.createCard = (req, res) => {
     .then((card) => res.send({ card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageCreateCard });
+        res.status(codeList.badRequest).send({ message: messageList.badRequestCreateCard });
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
@@ -38,16 +26,15 @@ module.exports.deleteCard = (req, res) => {
   Card.findByIdAndRemove({ _id: cardId })
     .then((card) => {
       if (!card) {
-        res.status(notFoundCode).send({ message: notFoundMessageCard });
-      } else {
-        res.send({ card });
+        return res.status(codeList.notFound).send({ message: messageList.notFoundCard });
       }
+      return res.send({ card });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(notFoundCode).send({ message: notFoundMessageCard });
+        res.status(codeList.badRequest).send({ message: messageList.badRequestDeleteCard });
       }
-      res.status(internalServerErrorCode).send({ err });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
@@ -60,16 +47,15 @@ module.exports.likeCard = (req, res) => {
   )
     .then((card) => {
       if (!card) {
-        res.status(notFoundCode).send({ message: notFoundMessageCard });
-      } else {
-        res.send({ card });
+        return res.status(codeList.notFound).send({ message: messageList.notFoundCard });
       }
+      return res.send({ card });
     })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageSetLike });
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        res.status(codeList.badRequest).send({ message: messageList.badRequestSetLike });
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
@@ -81,15 +67,14 @@ module.exports.dislikeCard = (req, res) => {
   )
     .then((card) => {
       if (!card) {
-        res.status(notFoundCode).send({ message: notFoundMessageCard });
-      } else {
-        res.send({ card });
+        return res.status(codeList.notFound).send({ message: messageList.notFoundCard });
       }
+      return res.send({ card });
     })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(badRequestCode).send({ message: badRequestMessageDeleteLike });
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        res.status(codeList.badRequest).send({ message: messageList.badRequestDeleteLike });
       }
-      res.status(internalServerErrorCode).send({ message: err.message });
+      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };

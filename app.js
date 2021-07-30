@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 const usersRoutes = require('./routes/users');
 const cardsRoutes = require('./routes/cards');
+const { codeList, messageList } = require('./utils/utils');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -30,7 +31,7 @@ app.use('/users', usersRoutes);
 app.use('/cards', cardsRoutes);
 
 app.use((req, res) => {
-  res.sendStatus(404);
+  res.status(codeList.notFound).send({ message: messageList.notFoundPage });
 });
 
 app.listen(PORT, () => {
