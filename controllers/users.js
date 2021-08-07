@@ -1,14 +1,43 @@
-const User = require('../models/user');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
+const User = require('../models/user');
 const { codeList, messageList } = require('../utils/utils');
 
+module.exports.login = (req, res) => {
+  const { email, password } = req.body;
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign({ _id: user.id }, 'e37b9730f510aa2fce083da3930885e6', { expiresIn: '7d' });
+      return res
+        // метод express'а установки куков: имя - строка, значение - наш токен:
+        .cookie('token', token, { // попадет в заголовок Cookies
+          maxAge: 3600000 * 24 * 7, // иначе после закр-я сессии - удалится
+          httpOnly: true, // исключили доступ из JavaScript в браузере
+          sameSite: true, // отпр. кук - если запрос с этого-же домена
+        })
+        .end();
+    })
+    .catch((err) => {
+      res.status(codeList.unauthorized).send({ message: err.message });
+    });
+};
+
 module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({ name, about, avatar })
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+  bcrypt.hash(password, 8)
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
     .then((user) => res.send({ user }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestCreateUser });
+        res.status(codeList.badRequest).send({
+          message:
+            err.errors.email ? err.errors.email.message : messageList.badRequestCreateUser,
+        });
       }
       res.status(codeList.internalServerError).send({ message: err.message });
     });
@@ -18,6 +47,17 @@ module.exports.getAllUsers = (req, res) => {
   User.find({})
     .then((users) => res.send({ data: users }))
     .catch((err) => res.status(codeList.internalServerError).send({ message: err.message }));
+};
+
+module.exports.getMe = (req, res) => {
+  User.findById(req.user._id)
+    .then((user) => res.send({ user }))
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });
+      }
+      res.status(codeList.internalServerError).send({ message: err.message });
+    });
 };
 
 module.exports.getUser = (req, res) => {
@@ -30,7 +70,7 @@ module.exports.getUser = (req, res) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });//
+        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });
       }
       res.status(codeList.internalServerError).send({ message: err.message });
     });
@@ -72,7 +112,7 @@ module.exports.updateAvatar = (req, res) => {
     },
   )
     .orFail(() => {
-      const error = new ReferenceError();
+      const error = new Error();
       error.statusCode = codeList.notFound;
       // throw генерир. искл-я, текущ ф-я будет ост-на и упр-е будет передано в первый блок catch
       throw error;

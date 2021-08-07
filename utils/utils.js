@@ -2,6 +2,8 @@ const codeList = {
   badRequest: 400,
   notFound: 404,
   internalServerError: 500,
+  unauthorized: 401,
+  forbidden: 403,
 };
 
 const messageList = {
@@ -19,6 +21,11 @@ const messageList = {
   notFoundCard: 'Карточка с указанным _id не найдена.',
 
   notFoundPage: 'Страница не существует',
+
+  unauthorizedCheckEmailAndPassword: 'Почта или пароль введены неправильно',
+  unauthorizedCheckAuthMessage: 'Нобходима авторизация!',
+
+  forbiddenMessage: 'Доступ не разрешен!',
 };
 
 module.exports = { codeList, messageList };
