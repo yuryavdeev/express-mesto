@@ -3,6 +3,7 @@ const isEmail = require('validator/lib/isEmail');
 const bcrypt = require('bcryptjs');
 
 const { messageList } = require('../utils/utils');
+const UnauthorizedError = require('../errors/unauthorized-err');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -11,50 +12,64 @@ const userSchema = new mongoose.Schema({
     maxlength: 30,
     default: 'Жак-Ив Кусто',
   },
+
   about: {
     type: String,
     minlength: 2,
     maxlength: 30,
     default: 'Исследователь',
   },
+
   avatar: {
     type: String,
     default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
+    validate: {
+      validator: (avatar) => /ht{1,2}ps?:\/\/[a-z0-9\\-]+\.[a-z0-9]{2,3}\S*/.test(avatar), // boolean
+      message: 'Ссылка для создания аватара некорректна!', // <= false
+    },
   },
+
   email: {
     type: String,
     required: true,
     unique: true,
     validate: {
-      validator: (v) => isEmail(v),
+      validator: (email) => isEmail(email),
       message: 'Введен неправильный формат почты',
     },
   },
+
   password: {
     type: String,
     required: true,
-    minlength: 5,
-    select: false, // => по умолчанию хеш пароля не будет возвращаться из базы
+    minlength: 6,
+    // select: false, // => хеш пароля не долж. возвр. из базы (не работает с create, только с finf)
   },
 });
 
-// код проверки почты и пароля - как часть схемы User:
-// чтобы добавить собственный метод - в свойство statics нужной схемы
+userSchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  delete obj.password; // или в контроллере возвращать вручную без пароля
+  return obj;
+};
+
+// проверка почты и пароля - часть схемы User; добавить свой метод - в св-во statics схемы
 userSchema.statics.findUserByCredentials = function (email, password) {
+  if (!password || password.length < 6) { // на роуте /signin
+    throw new UnauthorizedError(messageList.unauthorizedEmailOrPassword);
+  }
   // т.к. нужен хеш пароля => после вызова метода модели - добавить метод select и строку +password:
-  return this.findOne({ email }).select('+password') // this - это модель User
-    .then((user) => {
-      if (!user) {
-        return Promise.reject(new Error(messageList.unauthorizedCheckEmailAndPassword));
-      }
-      return bcrypt.compare(password, user.password) // сравн. пароль и хеш в базе
-        .then((matched) => { // вложен в 1-й .then
-          if (!matched) {
-            return Promise.reject(new Error(messageList.unauthorizedCheckEmailAndPassword));
-          }
-          return user;
-        });
-    });
+  return this.findOne({ email }).select('+password') // this - модель User
+    .orFail(() => {
+      throw new UnauthorizedError(messageList.unauthorizedEmailOrPassword);
+    })
+    .then((user) => bcrypt.compare(password, user.password) // сравн. пароль и хеш в базе
+      .then((matched) => { // вложен в 1-й .then
+        if (!matched) {
+          throw new UnauthorizedError(messageList.unauthorizedEmailOrPassword);
+        }
+        return user;
+      }));
 };
 
 module.exports = mongoose.model('user', userSchema);

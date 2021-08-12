@@ -1,18 +1,8 @@
-const codeList = {
-  badRequest: 400,
-  notFound: 404,
-  internalServerError: 500,
-  unauthorized: 401,
-  forbidden: 403,
-};
-
 const messageList = {
   badRequestCreateUser: 'Переданы некорректные данные при создании пользователя.',
-  badRequestUpdateUser: 'Переданы некорректные данные при обновлении профиля.',
-  badRequestUpdateAvatar: 'Переданы некорректные данные при обновлении аватара.',
+  badRequestUpdateUser: 'Переданы некорректные данные при обновлении данных пользователя.',
   badRequestGetUser: 'Переданы некорректные данные для получения данных пользователя.',
-  notFoundGetUser: 'Пользователь по указанному _id не найден.',
-  notFoundUpdateUser: 'Пользователь с указанным _id не найден.',
+  notFoundUser: 'Пользователь с указанным _id не найден.',
 
   badRequestCreateCard: 'Переданы некорректные данные при создании карточки.',
   badRequestDeleteCard: 'Переданы некорректные данные при удалении карточки',
@@ -22,10 +12,14 @@ const messageList = {
 
   notFoundPage: 'Страница не существует',
 
-  unauthorizedCheckEmailAndPassword: 'Почта или пароль введены неправильно',
-  unauthorizedCheckAuthMessage: 'Нобходима авторизация!',
+  conflictCreateUser: 'Профиль с таким e-mail уже существует!',
 
-  forbiddenMessage: 'Доступ не разрешен!',
+  unauthorizedEmailOrPassword: 'Почта или пароль введены неправильно',
+  unauthorizedCheckAuthMessage: 'Необходима авторизация!',
+
+  forbiddenMessage: 'Нет доступа!',
+
+  serverErrorMessage: 'Ошибка на сервере',
 };
 
-module.exports = { codeList, messageList };
+module.exports = { messageList };

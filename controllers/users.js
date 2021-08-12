@@ -2,9 +2,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
-const { codeList, messageList } = require('../utils/utils');
+const { messageList } = require('../utils/utils');
+const NotFoundError = require('../errors/not-found-err');
+const BadRequestError = require('../errors/bad-request');
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
   User.findUserByCredentials(email, password)
     .then((user) => {
@@ -18,68 +20,66 @@ module.exports.login = (req, res) => {
         })
         .end();
     })
-    .catch((err) => {
-      res.status(codeList.unauthorized).send({ message: err.message });
-    });
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
+  if (!email || !password || password.length < 6) { // на роуте /signup
+    throw new BadRequestError(messageList.badRequestCreateUser);
+  }
   bcrypt.hash(password, 8)
     .then((hash) => User.create({
       name, about, avatar, email, password: hash,
     }))
-    .then((user) => res.send({ user }))
+    .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(codeList.badRequest).send({
-          message:
-            err.errors.email ? err.errors.email.message : messageList.badRequestCreateUser,
-        });
+      if (err.name === 'MongoError' && err.code === 11000) {
+        const error = new Error(messageList.conflictCreateUser);
+        error.statusCode = 409;
+        next(error);
+      } else if (err.name === 'ValidationError') {
+        const error = new BadRequestError(
+          err.errors.email ? err.errors.email.message : messageList.badRequestCreateUser,
+        );
+        next(error);
+      } else {
+        // next(err);
+        res.send({ err });
       }
-      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
-module.exports.getAllUsers = (req, res) => {
+module.exports.getAllUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.send({ data: users }))
-    .catch((err) => res.status(codeList.internalServerError).send({ message: err.message }));
+    .then((users) => res.send(users))
+    .catch(next);
 };
 
-module.exports.getMe = (req, res) => {
-  User.findById(req.user._id)
-    .then((user) => res.send({ user }))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });
-      }
-      res.status(codeList.internalServerError).send({ message: err.message });
-    });
-};
-
-module.exports.getUser = (req, res) => {
-  User.findById(req.params.userId)
-    .then((user) => {
-      if (!user) {
-        return res.status(codeList.notFound).send({ message: messageList.notFoundGetUser });
-      }
-      return res.send({ user });
+module.exports.getUser = (req, res, next) => {
+  User.findById(req.params.userId ? req.params.userId : req.user._id)
+    .orFail(() => {
+      throw new NotFoundError(messageList.notFoundUser);
     })
+    .then((user) => res.send(user))
     .catch((err) => {
       if (err.name === 'CastError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestGetUser });
+        const error = new BadRequestError(messageList.badRequestGetUser);
+        next(error);
+      } else {
+        next(err);
       }
-      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
-module.exports.updateUser = (req, res) => {
+module.exports.updateUser = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     {
+      // name: req.body.name ? req.body.name : 'Жак-Ив Кусто',
+      // about: req.body.about ? req.body.about : 'Исследователь',
       name: req.body.name,
       about: req.body.about,
     },
@@ -88,43 +88,40 @@ module.exports.updateUser = (req, res) => {
       runValidators: true,
     },
   )
-    .then((user) => {
-      if (!user) {
-        return res.status(codeList.notFound).send({ message: messageList.notFoundGetUser });
-      }
-      return res.send({ user });
+    .orFail(() => {
+      throw new NotFoundError(messageList.notFoundUser);
     })
+    .then((user) => res.send(user))
     .catch((err) => {
       if (err.name === 'ValidationError' || err.name === 'CastError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestUpdateUser });
+        const error = new BadRequestError(messageList.badRequestUpdateUser);
+        next(error);
+      } else {
+        next(err);
       }
-      res.status(codeList.internalServerError).send({ message: err.message });
     });
 };
 
-module.exports.updateAvatar = (req, res) => {
+module.exports.updateAvatar = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
-    { avatar: req.body.avatar },
     {
-      new: true,
-      runValidators: true,
+      avatar: req.body.avatar,
+      // ? req.body.avatar
+      // : 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     },
+    { new: true, runValidators: true },
   )
     .orFail(() => {
-      const error = new Error();
-      error.statusCode = codeList.notFound;
-      // throw генерир. искл-я, текущ ф-я будет ост-на и упр-е будет передано в первый блок catch
-      throw error;
+      throw new NotFoundError(messageList.notFoundUser);
     })
-    .then((user) => res.send({ user }))
+    .then((user) => res.send(user))
     .catch((err) => {
       if (err.name === 'ValidationError' || err.name === 'CastError') {
-        res.status(codeList.badRequest).send({ message: messageList.badRequestUpdateAvatar });
+        const error = new BadRequestError(messageList.badRequestUpdateUser);
+        next(error);
+      } else {
+        next(err);
       }
-      if (err.statusCode === codeList.notFound) {
-        res.status(codeList.notFound).send({ message: messageList.notFoundUpdateUser });
-      }
-      res.status(codeList.internalServerError).send({ err });
     });
 };

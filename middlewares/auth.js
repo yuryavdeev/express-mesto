@@ -1,23 +1,23 @@
 const jwt = require('jsonwebtoken');
 
-const { codeList, messageList } = require('../utils/utils');
+const { messageList } = require('../utils/utils');
+const UnauthorizedError = require('../errors/unauthorized-err');
+const ForbiddenError = require('../errors/forbidden');
 
-// eslint-disable-next-line consistent-return
 module.exports = (req, res, next) => {
   if (!req.cookies.token) {
-    return res
-      .status(codeList.forbidden)
-      .send({ message: messageList.forbiddenMessage });
+    const err = new ForbiddenError(messageList.forbiddenMessage);
+    next(err);
   }
   let payload;
   try {
     // метод jwt.verify вернёт пейлоуд токена, если тот прошёл проверку
     payload = jwt.verify(req.cookies.token, 'e37b9730f510aa2fce083da3930885e6');
-  } catch (err) {
-    return res
-      .status(codeList.unauthorized)
-      .send({ message: messageList.unauthorizedCheckAuthMessage });
+  } catch (e) {
+    const err = new UnauthorizedError(messageList.unauthorizedCheckAuthMessage);
+    next(err);
   }
-  req.user = payload; // пейлоуд в объект запроса
+  // пейлоуд с данными пользователя (_id) в объект запроса
+  req.user = payload;
   next();
 };
