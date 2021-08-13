@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
-const isEmail = require('validator/lib/isEmail');
+const validator = require('validator');
 const bcrypt = require('bcryptjs');
 
 const { messageList } = require('../utils/utils');
 const UnauthorizedError = require('../errors/unauthorized-err');
+
+const regexUrl = /ht{1,2}ps?:\/\/[a-z0-9\\-]+\.[a-z]{2,3}\S*/;
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -24,7 +26,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     validate: {
-      validator: (avatar) => /ht{1,2}ps?:\/\/[a-z0-9\\-]+\.[a-z0-9]{2,3}\S*/.test(avatar), // boolean
+      validator: (avatar) => regexUrl.test(avatar),
+      // validator: (avatar) => validator.isURL(avatar), // <<<===
       message: 'Ссылка для создания аватара некорректна!', // <= false
     },
   },
@@ -34,7 +37,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     validate: {
-      validator: (email) => isEmail(email),
+      validator: (email) => validator.isEmail(email),
       message: 'Введен неправильный формат почты',
     },
   },
@@ -43,13 +46,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6,
-    // select: false, // => хеш пароля не долж. возвр. из базы (не работает с create, только с finf)
+    // select: false, // => хеш пароля не долж. возвр. из базы (не работает с create, только с find)
   },
 });
 
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
-  delete obj.password; // или в контроллере возвращать вручную без пароля
+  delete obj.password; // или в контроллере возвращать жестко без пароля
   return obj;
 };
 

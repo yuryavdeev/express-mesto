@@ -7,10 +7,15 @@ const NotFoundError = require('../errors/not-found-err');
 const BadRequestError = require('../errors/bad-request');
 
 module.exports.login = (req, res, next) => {
+  const { NODE_ENV, JWT_SECRET } = process.env;
   const { email, password } = req.body;
   User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign({ _id: user.id }, 'e37b9730f510aa2fce083da3930885e6', { expiresIn: '7d' });
+      const token = jwt.sign(
+        { _id: user.id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
+        { expiresIn: '7d' },
+      );
       return res
         // метод express'а установки куков: имя - строка, значение - наш токен:
         .cookie('token', token, { // попадет в заголовок Cookies
@@ -18,7 +23,7 @@ module.exports.login = (req, res, next) => {
           httpOnly: true, // исключили доступ из JavaScript в браузере
           sameSite: true, // отпр. кук - если запрос с этого-же домена
         })
-        .end();
+        .send({ message: 'Авторизация прошла успешно!' });
     })
     .catch(next);
 };
@@ -46,8 +51,7 @@ module.exports.createUser = (req, res, next) => {
         );
         next(error);
       } else {
-        // next(err);
-        res.send({ err });
+        next(err);
       }
     });
 };
@@ -75,14 +79,13 @@ module.exports.getUser = (req, res, next) => {
 };
 
 module.exports.updateUser = (req, res, next) => {
+  const { name, about } = req.body;
+  if (!name || !about) {
+    throw new BadRequestError(messageList.badRequestUpdateUser);
+  }
   User.findByIdAndUpdate(
     req.user._id,
-    {
-      // name: req.body.name ? req.body.name : 'Жак-Ив Кусто',
-      // about: req.body.about ? req.body.about : 'Исследователь',
-      name: req.body.name,
-      about: req.body.about,
-    },
+    { name, about },
     {
       new: true,
       runValidators: true,
@@ -107,8 +110,6 @@ module.exports.updateAvatar = (req, res, next) => {
     req.user._id,
     {
       avatar: req.body.avatar,
-      // ? req.body.avatar
-      // : 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     },
     { new: true, runValidators: true },
   )

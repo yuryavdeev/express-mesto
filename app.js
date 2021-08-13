@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config(); // env-переменные из файла .env добавил в process.env
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
@@ -11,6 +12,7 @@ const { messageList } = require('./utils/utils');
 const { login, createUser } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 const NotFoundError = require('./errors/not-found-err');
+const { handleError } = require('./errors/err');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -32,8 +34,7 @@ app.post('/signin',
   celebrate({
     body: Joi.object().keys({
       email: Joi.string().required().email(),
-      password: Joi.string().required(),
-      // .min(6),
+      password: Joi.string().required().min(6),
     }).unknown(), // доп. поля разрешены
   }),
   login);
@@ -44,11 +45,8 @@ app.post('/signup',
       name: Joi.string().min(2).max(30).pattern(new RegExp('^[a-z0-9\\.\\-\\_\\s]{2,30}$', 'i')),
       about: Joi.string().min(2).max(30),
       avatar: Joi.string().min(6),
-      email: Joi.string().required(),
-      // .email(),
-      password: Joi.string(),
-      // .required(),
-      // .min(6),
+      email: Joi.string().required().email(),
+      password: Joi.string().required().min(6),
     }),
   }),
   createUser);
@@ -60,7 +58,7 @@ app.use(auth);
 app.use('/users',
   celebrate({
     cookies: Joi.object().keys({
-      token: Joi.string().required().min(20),
+      token: Joi.string().required().min(20), // ////////////////// hex
     }),
   }),
   usersRoutes);
@@ -81,18 +79,7 @@ app.use((req, res, next) => {
 
 app.use(errors()); // обработчик ошибок celebrate
 
-app.use((err, req, res, next) => {
-  // если у ошибки нет статуса, выставляем 500
-  const { statusCode = 500, message } = err;
-  res
-    .status(statusCode)
-    .send({
-      message: statusCode === 500
-        ? messageList.serverErrorMessage
-        : message,
-    });
-  next();
-});
+app.use(handleError); // единый обработчик
 
 app.listen(PORT, () => {
   console.log(`порт на ${(PORT)}`);
