@@ -1,3 +1,6 @@
+const validator = require('validator'); // <<<===
+const BadRequestError = require('../errors/bad-request');
+
 const messageList = {
   badRequestCreateUser: 'Переданы некорректные данные при создании пользователя.',
   badRequestUpdateUser: 'Переданы некорректные данные при обновлении данных пользователя.',
@@ -22,4 +25,12 @@ const messageList = {
   serverErrorMessage: 'Ошибка на сервере',
 };
 
-module.exports = { messageList };
+const checkUrl = (value) => { // <<<===
+  const result = validator.isURL(value);
+  if (result) {
+    return value;
+  }
+  throw new BadRequestError('Needs URL!');
+};
+
+module.exports = { messageList, checkUrl };

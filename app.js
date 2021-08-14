@@ -3,7 +3,7 @@ require('dotenv').config(); // env-переменные из файла .env д�
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
-const { celebrate, errors, Joi } = require('celebrate');
+const { celebrate, Joi } = require('celebrate');
 const helmet = require('helmet');
 
 const usersRoutes = require('./routes/users');
@@ -12,7 +12,9 @@ const { messageList } = require('./utils/utils');
 const { login, createUser } = require('./controllers/users');
 const auth = require('./middlewares/auth');
 const NotFoundError = require('./errors/not-found-err');
+const BadRequestError = require('./errors/bad-request');
 const { handleError } = require('./errors/err');
+const { checkUrl } = require('./utils/utils');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -42,9 +44,9 @@ app.post('/signin',
 app.post('/signup',
   celebrate({
     body: Joi.object().keys({
-      name: Joi.string().min(2).max(30).pattern(new RegExp('^[a-z0-9\\.\\-\\_\\s]{2,30}$', 'i')),
+      name: Joi.string().min(2).max(30).pattern(new RegExp('^[a-z0-9\\.\\-\\+\\_\\s]{2,30}$', 'i')),
       about: Joi.string().min(2).max(30),
-      avatar: Joi.string().min(6),
+      avatar: Joi.string().custom(checkUrl), // <<<===
       email: Joi.string().required().email(),
       password: Joi.string().required().min(6),
     }),
@@ -77,7 +79,16 @@ app.use((req, res, next) => {
   next(err);
 });
 
-app.use(errors()); // обработчик ошибок celebrate
+app.use((err, req, res, next) => {
+  // обработчик ошибок celebrate
+  if (err.details) {
+    const errorBody = err.details.get('body'); // получил доступ к данным
+    const error = new BadRequestError(errorBody);
+    next(error);
+  } else {
+    next(err);
+  }
+});
 
 app.use(handleError); // единый обработчик
 

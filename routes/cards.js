@@ -1,19 +1,10 @@
 const router = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
-const validator = require('validator'); // <<<===
-const BadRequestError = require('../errors/bad-request');
+const { checkUrl } = require('../utils/utils');
 
 const {
   getAllCards, createCard, deleteCard, likeCard, dislikeCard,
 } = require('../controllers/cards');
-
-const checkUrl = (value) => { // <<<===
-  const result = validator.isURL(value);
-  if (result) {
-    return value;
-  }
-  throw new BadRequestError('Необходимо передавать URL!');
-};
 
 router.get('/', getAllCards);
 

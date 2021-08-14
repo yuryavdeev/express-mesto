@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { messageList } = require('../utils/utils');
 const UnauthorizedError = require('../errors/unauthorized-err');
 
-const regexUrl = /ht{1,2}ps?:\/\/[a-z0-9\\-]+\.[a-z]{2,3}\S*/;
+const regexUrl = /ht{1,2}ps?:\/\/[a-z0-9\\-]+\.[a-z0-9]{2,3}\S*/;
 
 const userSchema = new mongoose.Schema({
   name: {
