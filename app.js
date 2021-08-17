@@ -15,6 +15,7 @@ const NotFoundError = require('./errors/not-found-err');
 const BadRequestError = require('./errors/bad-request');
 const { handleError } = require('./errors/err');
 const { checkUrl } = require('./utils/utils');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 
 const { PORT = 3000 } = process.env;
 const app = express();
@@ -30,6 +31,8 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useCreateIndex: true,
   useFindAndModify: false,
 });
+
+app.use(requestLogger); // подключаем логгер запросов - перед обработчиками роутов
 
 // роуты, не требующие авторизации
 app.post('/signin',
@@ -79,8 +82,10 @@ app.use((req, res, next) => {
   next(err);
 });
 
+app.use(errorLogger); // подключаем логгер ошибок - после роутов и до обработчиков ошибок
+
+// обработчик ошибок celebrate
 app.use((err, req, res, next) => {
-  // обработчик ошибок celebrate
   if (err.details) {
     const errorBody = err.details.get('body'); // получил доступ к данным
     const error = new BadRequestError(errorBody);
