@@ -63,7 +63,7 @@ app.use(auth);
 app.use('/users',
   celebrate({
     cookies: Joi.object().keys({
-      token: Joi.string().required().min(20), // ////////////////// hex
+      token: Joi.string().required().min(20),
     }),
   }),
   usersRoutes);
