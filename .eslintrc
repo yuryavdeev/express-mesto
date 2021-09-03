@@ -1,7 +1,8 @@
 {
   "extends": "airbnb-base",
   "rules": {
-      "no-underscore-dangle": "off",
-      "no-console": "off"
+    "no-underscore-dangle": "off",
+    "no-console": "off",
+    "eslint linebreak-style": "unix"
   }
 }
