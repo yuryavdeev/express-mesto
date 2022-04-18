@@ -1,6 +1,6 @@
 const express = require('express');
 require('dotenv').config(); // env-переменные из файла .env добавил в process.env
-const bodyParser = require('body-parser');
+// const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const { celebrate, Joi } = require('celebrate');
@@ -21,8 +21,8 @@ const { PORT = 3000 } = process.env;
 const app = express();
 
 app.use(cookieParser()); // => токен в req.cookies.token
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(helmet()); // заголовки безопасности - проставить автоматически
 
 mongoose.connect('mongodb://localhost:27017/mestodb', {
